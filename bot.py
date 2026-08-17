@@ -35,7 +35,7 @@ from telegram.ext import (
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "YOUR_OPENROUTER_API_KEY_HERE")
-MODEL = "deepseek/deepseek-chat-v3.1:free"  # bepul model — xohlasangiz boshqasiga almashtirishingiz mumkin
+MODEL = "meta-llama/llama-3.3-70b-instruct:free"
 
 MAX_HISTORY_MESSAGES = 20  # har bir foydalanuvchi uchun saqlanadigan oxirgi xabarlar soni
 
