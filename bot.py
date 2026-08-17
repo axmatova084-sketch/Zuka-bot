@@ -3,7 +3,7 @@ Zuka — sun'iy do'st Telegram bot.
 
 Ishlatishdan oldin:
   1) pip install -r requirements.txt
-  2) BOT_TOKEN va ANTHROPIC_API_KEY muhit o'zgaruvchilarini o'rnating
+  2) BOT_TOKEN va OPENROUTER_API_KEY muhit o'zgaruvchilarini o'rnating
      (yoki pastdagi DEFAULT qiymatlarga to'g'ridan-to'g'ri yozing — tavsiya etilmaydi)
   3) python bot.py
 
@@ -19,7 +19,7 @@ import random
 from datetime import datetime
 from collections import defaultdict
 
-import anthropic
+from openai import OpenAI
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
@@ -34,8 +34,8 @@ from telegram.ext import (
 # ------------------------------------------------------------------
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN_HERE")
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "YOUR_ANTHROPIC_API_KEY_HERE")
-MODEL = "claude-sonnet-4-5"  # xohlasangiz boshqa modelga almashtirishingiz mumkin
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "YOUR_OPENROUTER_API_KEY_HERE")
+MODEL = "deepseek/deepseek-chat-v3.1:free"  # bepul model — xohlasangiz boshqasiga almashtirishingiz mumkin
 
 MAX_HISTORY_MESSAGES = 20  # har bir foydalanuvchi uchun saqlanadigan oxirgi xabarlar soni
 
@@ -51,7 +51,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=OPENROUTER_API_KEY,
+)
 
 # foydalanuvchi_id -> [{"role": "user"/"assistant", "content": "..."}]
 conversation_history = defaultdict(list)
@@ -130,15 +133,14 @@ async def ask_zuka(user_id: int, user_text: str) -> str:
     history = history[-MAX_HISTORY_MESSAGES:]
 
     try:
-        response = client.messages.create(
+        response = client.chat.completions.create(
             model=MODEL,
             max_tokens=400,
-            system=SYSTEM_PROMPT,
-            messages=history,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + history,
         )
-        reply = response.content[0].text
+        reply = response.choices[0].message.content
     except Exception as e:
-        logger.error(f"Anthropic API xatosi: {e}")
+        logger.error(f"OpenRouter API xatosi: {e}")
         reply = "Voy, hozir boshim aylanib qoldi, birpasdan keyin yoz-chi 😵"
 
     history.append({"role": "assistant", "content": reply})
@@ -162,15 +164,14 @@ async def zuka_initiate_message(user_id: int) -> str:
     temp_history = history + [{"role": "user", "content": trigger}]
 
     try:
-        response = client.messages.create(
+        response = client.chat.completions.create(
             model=MODEL,
             max_tokens=300,
-            system=SYSTEM_PROMPT,
-            messages=temp_history,
+            messages=[{"role": "system", "content": SYSTEM_PROMPT}] + temp_history,
         )
-        reply = response.content[0].text
+        reply = response.choices[0].message.content
     except Exception as e:
-        logger.error(f"Anthropic API xatosi (initiate): {e}")
+        logger.error(f"OpenRouter API xatosi (initiate): {e}")
         return None
 
     # Faqat Zukaning javobini xotiraga qo'shamiz, tizim xabarini emas
@@ -259,9 +260,9 @@ def main():
             "BOT_TOKEN o'rnatilmagan! Muhit o'zgaruvchisi sifatida BOT_TOKEN ni bering "
             "yoki bot.py faylida to'g'ridan-to'g'ri yozing."
         )
-    if ANTHROPIC_API_KEY == "YOUR_ANTHROPIC_API_KEY_HERE":
+    if OPENROUTER_API_KEY == "YOUR_OPENROUTER_API_KEY_HERE":
         raise SystemExit(
-            "ANTHROPIC_API_KEY o'rnatilmagan! Muhit o'zgaruvchisi sifatida bering."
+            "OPENROUTER_API_KEY o'rnatilmagan! Muhit o'zgaruvchisi sifatida bering."
         )
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
